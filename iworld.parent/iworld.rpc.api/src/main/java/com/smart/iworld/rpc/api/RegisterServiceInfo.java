@@ -1,7 +1,4 @@
 package com.smart.iworld.rpc.api;
-
-import java.io.File;
-import java.io.IOException;
 import java.io.Serializable;
 
 /**
@@ -16,11 +13,13 @@ public class RegisterServiceInfo implements Serializable {
 
 	private String interfaceName;
 	
-	private String servicClassName;
+	private Class<? extends Object> servicClass;
 	
 	private String url;
 	
 	private Integer priority;
+	
+	private Integer port;
 
 	public String getInterfaceName() {
 		return interfaceName;
@@ -30,12 +29,12 @@ public class RegisterServiceInfo implements Serializable {
 		this.interfaceName = interfaceName;
 	}
 
-	public String getServicClassName() {
-		return servicClassName;
+	public Class<? extends Object> getServicClass() {
+		return servicClass;
 	}
 
-	public void setServicClassName(String servicClassName) {
-		this.servicClassName = servicClassName;
+	public void setServicClass(Class<? extends Object> servicClass) {
+		this.servicClass = servicClass;
 	}
 
 	public String getUrl() {
@@ -52,5 +51,13 @@ public class RegisterServiceInfo implements Serializable {
 
 	public void setPriority(Integer priority) {
 		this.priority = priority;
+	}
+
+	public Integer getPort() {
+		return port;
+	}
+
+	public void setPort(Integer port) {
+		this.port = port;
 	}
 }
