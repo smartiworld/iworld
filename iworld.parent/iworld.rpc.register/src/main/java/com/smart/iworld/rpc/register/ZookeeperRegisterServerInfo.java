@@ -24,6 +24,10 @@ public class ZookeeperRegisterServerInfo extends RegisterServerInfo {
 	private Integer sessionTimeout;
 	/**注册中心父节点*/
 	private String parentPath;
+	
+	private static final String DEFAULT_CHAR_SET = "UTF-8";
+	
+	private String charSet = DEFAULT_CHAR_SET;
 
 	public String getConnetString() {
 		return connetString;
@@ -60,6 +64,14 @@ public class ZookeeperRegisterServerInfo extends RegisterServerInfo {
 
 	public void setParentPath(String parentPath) {
 		this.parentPath = parentPath;
+	}
+
+	public String getCharSet() {
+		return charSet;
+	}
+
+	public void setCharSet(String charSet) {
+		this.charSet = charSet;
 	}
 
 }

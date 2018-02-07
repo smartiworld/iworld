@@ -2,9 +2,12 @@
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 
-	<groupId>com.smart</groupId>
+	<parent>
+		<groupId>com.smart</groupId>
+		<artifactId>iworld.parent</artifactId>
+		<version>0.0.1-SNAPSHOT</version>
+	</parent>
 	<artifactId>iworld.rpc.register</artifactId>
-	<version>0.0.1-SNAPSHOT</version>
 	<packaging>jar</packaging>
 
 	<name>iworld.rpc.register</name>
@@ -17,7 +20,6 @@
 		<dependency>
 			<groupId>com.smart</groupId>
 			<artifactId>iworld.rpc.api</artifactId>
-			<version>${project.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>org.apache.zookeeper</groupId>
@@ -28,7 +30,6 @@
 		<dependency>
 			<groupId>com.alibaba</groupId>
 			<artifactId>fastjson</artifactId>
-			<version>1.2.39</version>
 		</dependency>
 
 	</dependencies>

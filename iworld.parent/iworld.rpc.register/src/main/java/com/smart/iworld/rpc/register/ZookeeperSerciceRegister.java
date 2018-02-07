@@ -1,21 +1,22 @@
 package com.smart.iworld.rpc.register;
 
-import java.io.IOException;
+import java.util.concurrent.CountDownLatch;
 
 import org.apache.zookeeper.CreateMode;
-import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
+import org.apache.zookeeper.Watcher.Event.EventType;
+import org.apache.zookeeper.Watcher.Event.KeeperState;
 import org.apache.zookeeper.ZooDefs.Ids;
 import org.apache.zookeeper.ZooKeeper;
-import org.apache.zookeeper.data.ACL;
 import org.apache.zookeeper.data.Stat;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.alibaba.fastjson.JSON;
-import com.smart.iworld.rpc.api.RegisterServerInfo;
 import com.smart.iworld.rpc.api.RegisterServiceInfo;
+import com.smart.iworld.rpc.api.ServiceInfo;
+import com.smart.iworld.rpc.api.ZookeeperServerInfo;
 
 
 public class ZookeeperSerciceRegister implements IServiceRegister {
@@ -23,17 +24,19 @@ public class ZookeeperSerciceRegister implements IServiceRegister {
 	private final Logger logger = LoggerFactory.getLogger(ZookeeperSerciceRegister.class);
 	private ZooKeeper zooKeeper;
 
-	private ZookeeperRegisterServerInfo registerServerInfo;
+	private ZookeeperServerInfo serverInfo;
 
-	public ZookeeperSerciceRegister(ZookeeperRegisterServerInfo registerServerInfo) {
-		this.registerServerInfo = registerServerInfo;
+	public ZookeeperSerciceRegister(ZookeeperServerInfo serverInfo) {
+		this.serverInfo = serverInfo;
 	}
 
 	public void start() {
 		try {
-			zooKeeper = new ZooKeeper(registerServerInfo.getConnetString(), registerServerInfo.getSessionTimeout(), new ZookeeperRegisterWatche());
+			CountDownLatch cdl = new CountDownLatch(1);
+			zooKeeper = new ZooKeeper(serverInfo.getConnetString(), serverInfo.getSessionTimeout(), new ZookeeperRegisterWatche(cdl));
+			cdl.await();
 			logger.debug("连接服务中心");
-		} catch (IOException e) {
+		} catch (Exception e) {
 			logger.error("连接服务中心失败:{}", e);
 		}
 	}
@@ -42,7 +45,11 @@ public class ZookeeperSerciceRegister implements IServiceRegister {
 	public void registeService(RegisterServiceInfo registerServiceInfo) {
 
 		try {
-			String parentPath = registerServerInfo.getParentPath();
+			ServiceInfo serviceInfo = new ServiceInfo();
+			serviceInfo.setInterfaceName(registerServiceInfo.getInterfaceName());
+			serviceInfo.setPriority(registerServiceInfo.getPriority());
+			serviceInfo.setUrl(registerServiceInfo.getUrl());
+			String parentPath = serverInfo.getParentPath();
 			Stat rootStat = zooKeeper.exists(parentPath, false);
 			if(rootStat == null) {
 				zooKeeper.create(parentPath, null, Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
@@ -54,9 +61,9 @@ public class ZookeeperSerciceRegister implements IServiceRegister {
 				String createServicePath = zooKeeper.create(parentPath + "/" + registerServiceInfo.getInterfaceName(), null, Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
 				logger.debug("create service path " + createServicePath);
 			}
-			String urlPath = servicePath + "/" +registerServiceInfo.getUrl();
-			String registerData = JSON.toJSONString(registerServiceInfo);
-			String createUrlPath = zooKeeper.create(urlPath, registerData.getBytes(), Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL);
+			String urlPath = servicePath + "/" +registerServiceInfo.getUrl() + ":" +registerServiceInfo.getPort();
+			String registerData = JSON.toJSONString(serviceInfo);
+			String createUrlPath = zooKeeper.create(urlPath, registerData.getBytes(serverInfo.getCharSet()), Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL);
 			logger.debug("create urlPath success " + createUrlPath);
 		} catch (Exception e) {
 			logger.error("创建节点失败");
@@ -65,9 +72,19 @@ public class ZookeeperSerciceRegister implements IServiceRegister {
 
 	private class ZookeeperRegisterWatche implements Watcher{
 
+		private CountDownLatch cdl;
+		
+		public ZookeeperRegisterWatche(CountDownLatch cdl) {
+			this.cdl = cdl;
+		}
+		
 		@Override
 		public void process(WatchedEvent event) {
-
+			if(KeeperState.SyncConnected == event.getState()) {
+				if(EventType.None == event.getType() && null == event.getPath()) {
+					cdl.countDown();
+				}
+			}
 		}
 
 	}
