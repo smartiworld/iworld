@@ -7,14 +7,18 @@ import net.sf.cglib.proxy.MethodProxy;
 
 public class ProxyMethodIntercept implements MethodInterceptor {
 
-	private ServicePathNodeCache nodeCache;
+	private String parentPath;
 	
-	public ProxyMethodIntercept(ServicePathNodeCache nodeCache) {
-		this.nodeCache = nodeCache;
+	public ProxyMethodIntercept(String parentPath) {
+		this.parentPath = parentPath;
 	}
 	
 	public Object intercept(Object arg0, Method arg1, Object[] arg2, MethodProxy arg3) throws Throwable {
-		//ServicePathNodeCache cache = new ServicePathNodeCache(serviceDiscover)
+		arg0.getClass().getName();
+		String serviePath = String.format("%s/%s", parentPath, arg0.getClass().getName());
+		ServicePathNodeCache.getServiceInfo(serviePath);
+		arg1.getParameterTypes();
+		arg1.getParameters();
 		return null;
 	}
 

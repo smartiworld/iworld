@@ -14,6 +14,7 @@
 		<module>iworld.rpc.api</module>
 		<module>iworld.rpc.register</module>
 		<module>iworld.rpc.discover</module>
+		<module>iworld.rpc.utils</module>
 	</modules>
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -34,6 +35,11 @@
 			<dependency>
 				<groupId>com.smart</groupId>
 				<artifactId>iworld.rpc.api</artifactId>
+				<version>${project.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>com.smart</groupId>
+				<artifactId>iworld.rpc.utils</artifactId>
 				<version>${project.version}</version>
 			</dependency>
 			<dependency>

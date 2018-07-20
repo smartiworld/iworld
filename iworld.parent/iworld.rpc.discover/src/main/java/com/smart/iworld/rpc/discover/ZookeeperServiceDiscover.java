@@ -1,11 +1,12 @@
 package com.smart.iworld.rpc.discover;
 
+import java.nio.charset.Charset;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
 
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
+import org.apache.curator.framework.recipes.cache.ChildData;
 import org.apache.curator.framework.recipes.cache.PathChildrenCache;
 import org.apache.curator.framework.recipes.cache.PathChildrenCacheEvent;
 import org.apache.curator.framework.recipes.cache.PathChildrenCacheListener;
@@ -23,19 +24,17 @@ import com.smart.iworld.rpc.api.exception.RcpException;
 public class ZookeeperServiceDiscover implements IServiceDiscover {
 
 	private static final Logger LOGGER = LoggerFactory.getLogger(ZookeeperServiceDiscover.class);
-	
+
 	private ZookeeperServerInfo serverInfo;
-	
+
 	private CuratorFramework curator;
-	
+
 	private PathChildrenCache parentCache;
-	
-	private ServicePathNodeCache cache;
-	
+
 	public ZookeeperServiceDiscover(ZookeeperServerInfo serverInfo) {
 		this.serverInfo = serverInfo;
 	}
-	
+
 	public void start() throws RcpException {
 		curator = CuratorFrameworkFactory.builder()
 				.connectString(serverInfo.getConnetString())
@@ -43,9 +42,6 @@ public class ZookeeperServiceDiscover implements IServiceDiscover {
 				.namespace(serverInfo.getParentPath())
 				.build();
 		curator.start();
-		if(serverInfo.isCache()) {
-			cache = new ServicePathNodeCache();
-		}
 		parentCache = new PathChildrenCache(curator, serverInfo.getParentPath(), true);
 		try {
 			parentCache.start();
@@ -55,15 +51,15 @@ public class ZookeeperServiceDiscover implements IServiceDiscover {
 		}
 		parentCache.getListenable().addListener(new ZookeeperPathEventListener());
 	}
-	
+
 	@SuppressWarnings("resource")
 	@Override
 	public List<ServiceInfo> discoverService(String serviceName) throws RcpException {
-		if(cache != null) {
-			List<ServiceInfo> serviceInfos = cache.getServiceInfo(serviceName);
+		List<ServiceInfo> serviceInfos = ServicePathNodeCache.getServiceInfo(serviceName);
+		if(serviceInfos != null && serviceInfos.size() >0) {
 			return serviceInfos;
 		}
-		List<ServiceInfo> serviceInfos = new ArrayList<>();
+		serviceInfos = new ArrayList<>();
 		String parentPath = serverInfo.getParentPath();
 		String servicePath = parentPath + "/" + serviceName;
 		PathChildrenCache childrenCache = new PathChildrenCache(curator, servicePath, true);
@@ -87,13 +83,14 @@ public class ZookeeperServiceDiscover implements IServiceDiscover {
 				ServiceInfo serviceInfo = JSON.parseObject(result, ServiceInfo.class);
 				serviceInfos.add(serviceInfo);
 			}
+			ServicePathNodeCache.setServiceInfo(servicePath, serviceInfos);
 		} catch (Exception e) {
 			LOGGER.error("discover service info error:{}", e);
 			throw new RcpException(e);
 		}
 		return serviceInfos;
 	}
-	
+
 	@Override
 	public void disCoverAllService() throws RcpException {
 		try {
@@ -103,48 +100,68 @@ public class ZookeeperServiceDiscover implements IServiceDiscover {
 				LOGGER.info("create parent path:{}", parentPath);
 				curator.create().forPath(parentPath);
 			}
-			List<String> childrenNodes = curator.getChildren().forPath(parentPath);
-			for(String childrenNode : childrenNodes) {
+			List<String> serviceNodes = curator.getChildren().forPath(parentPath);
+			for(String serviceNode : serviceNodes) {
 				List<ServiceInfo> serviceInfos = new ArrayList<>();
-				List<String> serviceNodes = curator.getChildren().forPath(childrenNode);
-				for(String serviceNode : serviceNodes) {
-					byte[] serviceData = curator.getData().forPath(serviceNode);
+				List<String> childrenNodes = curator.getChildren().forPath(serviceNode);
+				for(String childrenNode : childrenNodes) {
+					byte[] serviceData = curator.getData().forPath(childrenNode);
 					String result = new String(serviceData, serverInfo.getCharSet());
 					ServiceInfo serviceInfo = JSON.parseObject(result, ServiceInfo.class);
 					serviceInfos.add(serviceInfo);
 				}
-				if(cache == null) {
-					cache = new ServicePathNodeCache();
-				}
-				cache.setServiceInfo(childrenNode, serviceInfos);
+				ServicePathNodeCache.setServiceInfo(serviceNode, serviceInfos);
 			}
 		} catch (Exception e) {
 			LOGGER.error("discover services info error:{}", e);
 			throw new RcpException(e);
 		}
-		
+
 	}
-	
+
 	public void stop() {
 		curator.close();
 	}
-	
+
 	public static void main(String[] args) {
 		RegisterServiceInfo rs = new RegisterServiceInfo();
+		System.out.println(rs.getClass().getName());
 		rs.setInterfaceName(rs.getClass().getName());
 		rs.setPriority(1);
 		String json = JSON.toJSONString(rs);
 		System.out.println(json);
+		String format = String.format("%s/%s", "ni", "ta");
+		System.out.println(format);
 	}
-	
+
 	private class ZookeeperPathEventListener implements PathChildrenCacheListener{
 
 		@Override
 		public void childEvent(CuratorFramework client, PathChildrenCacheEvent event) throws Exception {
-			
-			
+			ChildData childData = event.getData();
+			switch(event.getType()) {
+			case CHILD_ADDED:
+			case CHILD_UPDATED:
+				dealChildEvent(childData);
+				break;
+			case CHILD_REMOVED:
+				String path = childData.getPath();
+				ServicePathNodeCache.deleteServiceInfo(path);
+				break;
+			default:
+				disCoverAllService();
+				break;
+			}
 		}
-		
+
 	}
-	
+
+	private void dealChildEvent(ChildData childData) {
+		byte[] data = childData.getData();
+		String charSet = serverInfo.getCharSet();
+		String result = new String(data, Charset.forName(charSet));
+		ServiceInfo serviceInfo = JSON.parseObject(result, ServiceInfo.class);
+		String path = childData.getPath();
+		ServicePathNodeCache.setServiceInfo(path, serviceInfo);
+	}
 }
