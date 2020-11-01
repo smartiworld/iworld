@@ -1,13 +1,15 @@
 package com.smart.iworld.rpc.discover;
 
-import com.smart.iworld.rpc.api.ServiceFinder;
+import java.util.List;
+
+import com.smart.iworld.rpc.api.AbstractServiceFinder;
 import com.smart.iworld.rpc.api.ServiceInfo;
 import com.smart.iworld.rpc.api.exception.ServiceNotFoundException;
 
-public class IPHashServiceFinder implements ServiceFinder {
+public class IPHashServiceFinder extends AbstractServiceFinder {
 
 	@Override
-	public ServiceInfo getServiceInfo(String serviceName) throws ServiceNotFoundException {
+	public ServiceInfo find(List<ServiceInfo> serviceInfos) throws ServiceNotFoundException {
 		// TODO Auto-generated method stub
 		return null;
 	}

@@ -7,6 +7,8 @@ public class ServiceInfo {
 	private String url;
 	
 	private Integer priority;
+	
+	private boolean isAlive = true;
 
 	public String getInterfaceName() {
 		return interfaceName;
@@ -31,4 +33,13 @@ public class ServiceInfo {
 	public void setPriority(Integer priority) {
 		this.priority = priority;
 	}
+
+	public boolean isAlive() {
+		return isAlive;
+	}
+
+	public void setAlive(boolean isAlive) {
+		this.isAlive = isAlive;
+	}
+	
 }

@@ -30,6 +30,8 @@ public class ZookeeperServiceDiscover implements IServiceDiscover {
 	private CuratorFramework curator;
 
 	private PathChildrenCache parentCache;
+	
+	private LoadBanlancer loadBanlancer = null;
 
 	public ZookeeperServiceDiscover(ZookeeperServerInfo serverInfo) {
 		this.serverInfo = serverInfo;
@@ -50,12 +52,13 @@ public class ZookeeperServiceDiscover implements IServiceDiscover {
 			throw new RcpException(e);
 		}
 		parentCache.getListenable().addListener(new ZookeeperPathEventListener());
+		loadBanlancer = LoadBanlancerFactory.getLoadBanlancer("default");
 	}
 
 	@SuppressWarnings("resource")
 	@Override
 	public List<ServiceInfo> discoverService(String serviceName) throws RcpException {
-		List<ServiceInfo> serviceInfos = ServicePathNodeCache.getServiceInfo(serviceName);
+		List<ServiceInfo> serviceInfos = loadBanlancer.getServiceInfos(serviceName);
 		if(serviceInfos != null && serviceInfos.size() >0) {
 			return serviceInfos;
 		}
@@ -83,7 +86,7 @@ public class ZookeeperServiceDiscover implements IServiceDiscover {
 				ServiceInfo serviceInfo = JSON.parseObject(result, ServiceInfo.class);
 				serviceInfos.add(serviceInfo);
 			}
-			ServicePathNodeCache.setServiceInfo(servicePath, serviceInfos);
+			loadBanlancer.setServiceInfo(servicePath, serviceInfos);
 		} catch (Exception e) {
 			LOGGER.error("discover service info error:{}", e);
 			throw new RcpException(e);
@@ -110,7 +113,7 @@ public class ZookeeperServiceDiscover implements IServiceDiscover {
 					ServiceInfo serviceInfo = JSON.parseObject(result, ServiceInfo.class);
 					serviceInfos.add(serviceInfo);
 				}
-				ServicePathNodeCache.setServiceInfo(serviceNode, serviceInfos);
+				loadBanlancer.setServiceInfo(serviceNode, serviceInfos);
 			}
 		} catch (Exception e) {
 			LOGGER.error("discover services info error:{}", e);
@@ -130,7 +133,7 @@ public class ZookeeperServiceDiscover implements IServiceDiscover {
 		rs.setPriority(1);
 		String json = JSON.toJSONString(rs);
 		System.out.println(json);
-		String format = String.format("%s/%s", "ni", "ta");
+		String format = String.format("ttttt%s/%s", "ni", "ta");
 		System.out.println(format);
 	}
 
@@ -145,23 +148,30 @@ public class ZookeeperServiceDiscover implements IServiceDiscover {
 				dealChildEvent(childData);
 				break;
 			case CHILD_REMOVED:
+				//TODO bug
 				String path = childData.getPath();
-				ServicePathNodeCache.deleteServiceInfo(path);
+				loadBanlancer.deleteServiceInfo(path);
 				break;
 			default:
 				disCoverAllService();
+				LOGGER.info("default event dis all server");
 				break;
 			}
 		}
 
 	}
 
+	/**
+	 * 服务更新回调
+	 * @param childData
+	 */
 	private void dealChildEvent(ChildData childData) {
+		LOGGER.info("服务提供者数据:" + childData);
 		byte[] data = childData.getData();
 		String charSet = serverInfo.getCharSet();
 		String result = new String(data, Charset.forName(charSet));
 		ServiceInfo serviceInfo = JSON.parseObject(result, ServiceInfo.class);
 		String path = childData.getPath();
-		ServicePathNodeCache.setServiceInfo(path, serviceInfo);
+		loadBanlancer.setServiceInfo(path, serviceInfo);
 	}
 }
