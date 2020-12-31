@@ -1,6 +1,6 @@
 ## .gitignore for eclipse
-.classpath  
-.project  
+.classpath
+.project
 .settings/
 target/
 target/**/*.class
@@ -10,3 +10,7 @@ target/**/*.class
 /logs
 *.log
 *.log.*
+.springBeans
+*.iml
+.idea
+out/*
